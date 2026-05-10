@@ -96,9 +96,9 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
 </div>
 </div>
 <script>
-const LOCS=[{name:'Valinhos',lat:-22.97,lng:-46.99,tz:-3},{name:'São Paulo',lat:-23.55,lng:-46.63,tz:-3},{name:'Utrecht',lat:52.09,lng:5.12,tz:1}];
+const LOCS=[{name:'Valinhos',lat:-22.97,lng:-46.99,tz:-3,tzName:'UTC−3'},{name:'São Paulo',lat:-23.55,lng:-46.63,tz:-3,tzName:'UTC−3'},{name:'Utrecht',lat:52.09,lng:5.12,tz:1,tzName:'UTC+1'}];
 let loc=LOCS[0],mainTab='sun',sunSub='day',moonSub='day',tideSub='day';
-const now=new Date();let selYear=now.getFullYear();let tzMode='local';
+const now=new Date();let selYear=now.getFullYear();let tzMode=String(LOCS[0].tz);
 const DPR=Math.min(window.devicePixelRatio||1,2),dk=matchMedia('(prefers-color-scheme:dark)').matches;
 const C={ring:dk?'rgba(255,255,255,.06)':'rgba(0,0,0,.05)',tick:dk?'rgba(255,255,255,.1)':'rgba(0,0,0,.08)',tickM:dk?'rgba(255,255,255,.18)':'rgba(0,0,0,.14)',txt:dk?'rgba(255,255,255,.38)':'rgba(0,0,0,.32)',card:dk?'rgba(255,255,255,.7)':'rgba(0,0,0,.65)',northA:dk?'#F09595':'#A32D2D',horiz:dk?'rgba(255,255,255,.2)':'rgba(0,0,0,.14)',grid:dk?'rgba(255,255,255,.05)':'rgba(0,0,0,.04)',sun:'#c75b22',sunDot:'#e8922e',sunP:dk?'rgba(199,91,34,.4)':'rgba(199,91,34,.3)',sunT:dk?'rgba(199,91,34,.75)':'rgba(199,91,34,.55)',sunF:dk?'rgba(199,91,34,.16)':'rgba(199,91,34,.08)',gold:'#c9960e',goldF:dk?'rgba(201,150,14,.18)':'rgba(201,150,14,.1)',goldL:dk?'rgba(201,150,14,.45)':'rgba(201,150,14,.3)',twi:'#5a7aa5',twiF:dk?'rgba(90,122,165,.12)':'rgba(90,122,165,.07)',twiL:dk?'rgba(90,122,165,.35)':'rgba(90,122,165,.2)',moon:'#6e6ca0',moonDot:dk?'#a8a6d4':'#534ab7',moonP:dk?'rgba(110,108,160,.35)':'rgba(110,108,160,.25)',moonT:dk?'rgba(110,108,160,.65)':'rgba(110,108,160,.5)',moonF:dk?'rgba(110,108,160,.16)':'rgba(110,108,160,.08)',dotLbl:dk?'rgba(255,255,255,.85)':'rgba(0,0,0,.75)',dotStr:dk?'rgba(0,0,0,.6)':'rgba(255,255,255,.8)',mSurf:dk?'#c8c6be':'#d4d2ca',mShad:dk?'#222220':'#3a3a36',tideH:dk?'#5DCAA5':'#1D9E75',tideL:dk?'#85B7EB':'#378ADD',tideMid:dk?'#d4a56a':'#c9960e',altFind:dk?'#5DCAA5':'#1D9E75'};
 
@@ -106,7 +106,19 @@ const C={ring:dk?'rgba(255,255,255,.06)':'rgba(0,0,0,.05)',tick:dk?'rgba(255,255
 const yrSel=document.getElementById('yrSelect');
 yrSel.value=selYear;
 yrSel.addEventListener('change',()=>{selYear=+yrSel.value;render()});
+document.getElementById('tzSelect').value=tzMode;
 document.getElementById('tzSelect').addEventListener('change',e=>{tzMode=e.target.value;render()});
+
+function getMinutesInTz(date){
+  if(tzMode==='local')return date.getHours()*60+date.getMinutes();
+  const off=parseInt(tzMode);
+  const utcH=date.getUTCHours(),utcM=date.getUTCMinutes();
+  let m=utcH*60+utcM+off*60;if(m<0)m+=1440;if(m>=1440)m-=1440;return m}
+function getTzLabel(){
+  if(tzMode==='local')return'horário local';
+  const o=parseInt(tzMode);return'UTC'+(o>=0?'+':'')+o}
+function syncTzSelect(){document.getElementById('tzSelect').value=tzMode}
+
 document.getElementById('gearBtn').addEventListener('click',()=>document.getElementById('settingsOverlay').classList.add('open'));
 document.getElementById('settingsClose').addEventListener('click',()=>document.getElementById('settingsOverlay').classList.remove('open'));
 document.getElementById('settingsOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.classList.remove('open')});
@@ -153,6 +165,20 @@ if(freqData)drawAzFreq(ctx,sz,freqData,freqColor||pCol);
 segs.forEach(seg=>{if(seg.length<2)return;[seg.filter(p=>!p.above),seg.filter(p=>p.above)].forEach((pts,pi)=>{if(pts.length<2)return;const col=pi?tCol:pCol,w=pi?2.5:1.2;const subs=[[]];pts.forEach((p,i)=>{if(i>0&&Math.abs(p.az-pts[i-1].az)>90)subs.push([]);subs[subs.length-1].push(p)});subs.forEach(ss=>{if(ss.length<2)return;ctx.strokeStyle=col;ctx.lineWidth=w;ctx.lineCap='round';ctx.setLineDash([]);ctx.beginPath();ss.forEach((p,i)=>{const rad=(p.az-90)*Math.PI/180,x=cx+(r-12)*Math.cos(rad),y=cy+(r-12)*Math.sin(rad);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)});ctx.stroke()})})});
 const sr=(selAz-90)*Math.PI/180;ctx.strokeStyle=dCol;ctx.lineWidth=2;ctx.lineCap='round';ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+(r-4)*Math.cos(sr),cy+(r-4)*Math.sin(sr));ctx.stroke();ctx.fillStyle=dCol;ctx.beginPath();ctx.arc(cx+(r-12)*Math.cos(sr),cy+(r-12)*Math.sin(sr),6,0,Math.PI*2);ctx.fill();ctx.fillStyle=dk?'#444':'#bbb';ctx.beginPath();ctx.arc(cx,cy,3,0,Math.PI*2);ctx.fill();ctx.font='600 10px -apple-system,sans-serif';ctx.fillStyle=C.dotLbl;ctx.textAlign='center';const lx=cx+(r-12)*Math.cos(sr)+20*Math.cos(sr),ly=cy+(r-12)*Math.sin(sr)+20*Math.sin(sr);ctx.strokeStyle=C.dotStr;ctx.lineWidth=3;const at=Math.round(((selAz%360)+360)%360)+'°';ctx.strokeText(at,lx,ly);ctx.fillText(at,lx,ly)}
 
+function getSolEqDoys(){
+  const y=selYear;
+  const mar=doyF(new Date(y,2,20)),jun=doyF(new Date(y,5,21)),sep=doyF(new Date(y,8,22)),dec=doyF(new Date(y,11,21));
+  return[{d:mar,l:'Eq'},{d:jun,l:'Sol'},{d:sep,l:'Eq'},{d:dec,l:'Sol'}]}
+function drawSolEqMarkers(ctx,xP,padT,padB,h,dy){
+  const marks=getSolEqDoys();
+  const col=dk?'rgba(255,255,255,.18)':'rgba(0,0,0,.12)';
+  const txtCol=dk?'rgba(255,255,255,.3)':'rgba(0,0,0,.22)';
+  marks.forEach(m=>{if(m.d>=dy)return;
+    const x=xP(m.d);ctx.strokeStyle=col;ctx.lineWidth=.8;ctx.setLineDash([3,4]);
+    ctx.beginPath();ctx.moveTo(x,padT);ctx.lineTo(x,h-padB);ctx.stroke();ctx.setLineDash([]);
+    ctx.font='500 8px -apple-system,sans-serif';ctx.fillStyle=txtCol;ctx.textAlign='center';
+    ctx.fillText(m.l,x,padT-1)})}
+
 function drawAlt(ctx,w,h,data,selIdx,o){
 ctx.clearRect(0,0,w,h);const p={t:12,b:24,l:32,r:8},cw=w-p.l-p.r,ch=h-p.t-p.b,mi=o.minAlt,ma=o.maxAlt,rng=ma-mi;
 function xP(i){return p.l+i/(data.length-1)*cw}function yP(a){return p.t+(1-(a-mi)/rng)*ch}
@@ -162,17 +188,22 @@ if(mi<=0&&ma>=0){const hy=yP(0);ctx.strokeStyle=C.horiz;ctx.lineWidth=1.2;ctx.se
 const step=rng>80?30:rng>40?15:10;ctx.font='400 9px -apple-system,sans-serif';ctx.textAlign='right';ctx.textBaseline='middle';
 for(let a=Math.ceil(mi/step)*step;a<=ma;a+=step){const y=yP(a);if(y<p.t-2||y>h-p.b+2)continue;if(a!==0){ctx.strokeStyle=C.grid;ctx.lineWidth=.5;ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(p.l,y);ctx.lineTo(w-p.r,y);ctx.stroke()}ctx.fillStyle=C.txt;ctx.fillText(a+'°',p.l-4,y)}
 ctx.textAlign='center';ctx.textBaseline='top';if(o.xLabels)o.xLabels.forEach(lb=>{ctx.fillStyle=C.txt;ctx.fillText(lb.t,xP(lb.i),h-p.b+5)});
+if(data.length>300)drawSolEqMarkers(ctx,xP,p.t,p.b,h,data.length);
 if(mi<=0&&ma>=0){const hy=yP(0);ctx.fillStyle=o.fill;ctx.beginPath();ctx.moveTo(p.l,hy);data.forEach((d,i)=>{ctx.lineTo(xP(i),d.alt>=0?yP(d.alt):hy)});ctx.lineTo(xP(data.length-1),hy);ctx.closePath();ctx.fill()}
 ctx.strokeStyle=o.line;ctx.lineWidth=2;ctx.lineCap='round';ctx.setLineDash([]);ctx.beginPath();data.forEach((d,i)=>{i===0?ctx.moveTo(xP(i),yP(d.alt)):ctx.lineTo(xP(i),yP(d.alt))});ctx.stroke();
 if(o.auxLine&&o.auxLine.length===data.length){ctx.strokeStyle=o.auxColor||C.txt;ctx.lineWidth=1.5;ctx.lineCap='round';ctx.setLineDash([4,4]);ctx.beginPath();o.auxLine.forEach((v,i)=>{const x=xP(i),y=yP(v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)});ctx.stroke();ctx.setLineDash([])}
 if(o.auxLine2&&o.auxLine2.length===data.length){ctx.strokeStyle=o.auxColor2||C.txt;ctx.lineWidth=1.5;ctx.lineCap='round';ctx.setLineDash([3,5]);ctx.beginPath();o.auxLine2.forEach((v,i)=>{const x=xP(i),y=yP(v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)});ctx.stroke();ctx.setLineDash([])}
+if(o.extraMarkers){const emCol=dk?'rgba(93,202,165,.3)':'rgba(29,158,117,.2)';const emTxt=dk?'rgba(93,202,165,.5)':'rgba(29,158,117,.4)';
+o.extraMarkers.forEach(m=>{if(m.d>=data.length)return;const x=xP(m.d);ctx.strokeStyle=m.col||emCol;ctx.lineWidth=.7;ctx.setLineDash([2,4]);ctx.beginPath();ctx.moveTo(x,p.t);ctx.lineTo(x,h-p.b);ctx.stroke();ctx.setLineDash([]);
+ctx.font='500 7px -apple-system,sans-serif';ctx.fillStyle=m.col||emTxt;ctx.textAlign='center';
+const lbl=m.l;const tx=x,ty=p.t+(m.yi||0)*9;ctx.fillText(lbl,tx,ty)})}
 if(selIdx!==null&&selIdx>=0&&selIdx<data.length){const sx=xP(selIdx),sy=yP(data[selIdx].alt);ctx.strokeStyle=o.dot+'44';ctx.lineWidth=.5;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(sx,p.t);ctx.lineTo(sx,h-p.b);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=o.dot;ctx.beginPath();ctx.arc(sx,sy,5,0,Math.PI*2);ctx.fill();ctx.fillStyle=dk?'#000':'#fff';ctx.beginPath();ctx.arc(sx,sy,1.5,0,Math.PI*2);ctx.fill();ctx.font='600 10px -apple-system,sans-serif';ctx.fillStyle=C.dotLbl;ctx.textAlign='center';ctx.strokeStyle=C.dotStr;ctx.lineWidth=3;const t=data[selIdx].alt.toFixed(1)+'°';ctx.strokeText(t,sx,sy-12);ctx.fillText(t,sx,sy-12)}}
 
 function drawMoonDisc(cv,phase){const sz=56;cv.width=sz*DPR;cv.height=sz*DPR;cv.style.width=sz+'px';cv.style.height=sz+'px';const ctx=cv.getContext('2d');ctx.scale(DPR,DPR);const cx=sz/2,cy=sz/2,r=sz/2-3;ctx.fillStyle=C.mSurf;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();ctx.fillStyle=C.mShad;ctx.beginPath();const a=phase*2*Math.PI;if(phase<=.5){ctx.arc(cx,cy,r,-Math.PI/2,Math.PI/2,false);const k=Math.cos(a);ctx.ellipse(cx,cy,Math.abs(k)*r,r,0,Math.PI/2,-Math.PI/2,k>0)}else{ctx.arc(cx,cy,r,Math.PI/2,-Math.PI/2,false);const k=Math.cos(a);ctx.ellipse(cx,cy,Math.abs(k)*r,r,0,-Math.PI/2,Math.PI/2,k<=0)}ctx.fill();ctx.strokeStyle=dk?'rgba(255,255,255,.12)':'rgba(0,0,0,.08)';ctx.lineWidth=1;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke()}
 
 function compute(type,mode,mins,dayOfYear){const a=[],dy=daysInYear();
-if(mode==='day'){const base=fromDoy(dayOfYear);for(let m=0;m<=1440;m+=5){const d=makeDateFromDoy(dayOfYear,Math.floor(m/60),m%60);const q=type==='sun'?SunCalc.getPosition(d,loc.lat,loc.lng):SunCalc.getMoonPosition(d,loc.lat,loc.lng);a.push({min:m,alt:q.altitude*180/Math.PI,az:((q.azimuth*180/Math.PI)%360+360)%360,above:q.altitude>0})}}
-else{for(let d=0;d<dy;d++){const dt=makeDateFromDoy(d,Math.floor(mins/60),mins%60);const q=type==='sun'?SunCalc.getPosition(dt,loc.lat,loc.lng):SunCalc.getMoonPosition(dt,loc.lat,loc.lng);a.push({doy:d,alt:q.altitude*180/Math.PI,az:((q.azimuth*180/Math.PI)%360+360)%360,above:q.altitude>0})}}return a}
+if(mode==='day'){const base=fromDoy(dayOfYear);for(let m=0;m<=1440;m+=5){const d=makeDateFromDoy(dayOfYear,Math.floor(m/60),m%60);const q=type==='sun'?SunCalc.getPosition(d,loc.lat,loc.lng):SunCalc.getMoonPosition(d,loc.lat,loc.lng);a.push({min:m,alt:q.altitude*180/Math.PI,az:((q.azimuth*180/Math.PI+180)%360+360)%360,above:q.altitude>0})}}
+else{for(let d=0;d<dy;d++){const dt=makeDateFromDoy(d,Math.floor(mins/60),mins%60);const q=type==='sun'?SunCalc.getPosition(dt,loc.lat,loc.lng):SunCalc.getMoonPosition(dt,loc.lat,loc.lng);a.push({doy:d,alt:q.altitude*180/Math.PI,az:((q.azimuth*180/Math.PI+180)%360+360)%360,above:q.altitude>0})}}return a}
 
 /* Sun: find time when sun reaches targetAlt while ascending */
 function sunAltAtMin(doy,m){const d=makeDateFromDoy(doy,Math.floor(m/60),m%60);return SunCalc.getPosition(d,loc.lat,loc.lng).altitude*180/Math.PI}
@@ -188,6 +219,25 @@ function findSunTimeAtAltDesc(dayOfYear,targetAlt){
     prev=alt}return null}
 
 /* Draw: time when sun is at current alt across the year */
+function computeSunExtremes(){
+  const dy=daysInYear(),days=[];
+  for(let d=0;d<dy;d++){const t=SunCalc.getTimes(fromDoy(d),loc.lat,loc.lng);
+    const rise=t.sunrise?getMinutesInTz(t.sunrise):null;
+    const set=t.sunset?getMinutesInTz(t.sunset):null;
+    const dur=(rise!==null&&set!==null)?(set>=rise?set-rise:set+1440-rise):null;
+    const noon=t.solarNoon?getMinutesInTz(t.solarNoon):null;
+    const eot=noon!==null?noon-720:null;
+    days.push({doy:d,rise,set,dur,noon,eot})}
+  const withRise=days.filter(d=>d.rise!==null),withSet=days.filter(d=>d.set!==null),withDur=days.filter(d=>d.dur!==null);
+  return{
+    earlyRise:withRise.reduce((a,b)=>a.rise<b.rise?a:b),
+    lateRise:withRise.reduce((a,b)=>a.rise>b.rise?a:b),
+    earlySet:withSet.reduce((a,b)=>a.set<b.set?a:b),
+    lateSet:withSet.reduce((a,b)=>a.set>b.set?a:b),
+    longest:withDur.reduce((a,b)=>a.dur>b.dur?a:b),
+    shortest:withDur.reduce((a,b)=>a.dur<b.dur?a:b),
+    days}}
+
 function computeSunDailyMax(){const dy=daysInYear(),out=[];for(let d=0;d<dy;d++){let mx=-999,mxMin=720;for(let m=0;m<=1440;m+=5){const dt=makeDateFromDoy(d,Math.floor(m/60),m%60);const alt=SunCalc.getPosition(dt,loc.lat,loc.lng).altitude*180/Math.PI;if(alt>mx){mx=alt;mxMin=m}}out.push({doy:d,maxAlt:mx,maxTime:mxMin})}return out}
 
 function drawSunAltYearTime(ctx,w,h,targetAlt,isAscending,dayV,dailyMax,zoom){
@@ -210,6 +260,7 @@ function drawSunAltYearTime(ctx,w,h,targetAlt,isAscending,dayV,dailyMax,zoom){
   const hRange=yMax-yMin;const hStep=hRange>600?3:hRange>300?2:hRange>120?1:0.5;
   for(let hr=Math.ceil(yMin/60/hStep)*hStep;hr<=Math.floor(yMax/60);hr+=hStep){const m=hr*60;const y=yP(m);if(y<pad.t-2||y>h-pad.b+2)continue;ctx.strokeStyle=C.grid;ctx.lineWidth=.5;ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();ctx.fillStyle=C.txt;const lbl=fT(m);ctx.fillText(lbl,pad.l-4,y)}
   ctx.textAlign='center';ctx.textBaseline='top';yrLb().forEach(lb=>{ctx.fillStyle=C.txt;ctx.fillText(lb.t,xP(lb.i),h-pad.b+5)});
+  drawSolEqMarkers(ctx,xP,pad.t,pad.b,h,dy);
   if(dailyMax&&dailyMax.length>1){ctx.strokeStyle=dk?'rgba(232,146,46,.3)':'rgba(199,91,34,.22)';ctx.lineWidth=1.5;ctx.lineCap='round';ctx.setLineDash([4,4]);ctx.beginPath();
   dailyMax.forEach((d,i)=>{const x=xP(i),raw=d.maxTime,clamped=Math.max(yMin,Math.min(yMax,raw)),y=yP(clamped);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)});ctx.stroke();ctx.setLineDash([])}
   if(pts.length>1){ctx.strokeStyle=C.altFind;ctx.lineWidth=2.5;ctx.lineCap='round';ctx.setLineDash([]);ctx.beginPath();let st=false;
@@ -246,6 +297,7 @@ const steps=hasH?[-.5,0,.5]:[ 0,.25,.5,.75,1];
 steps.forEach(v=>{if(v<minV||v>maxV)return;const y=yP(v);ctx.strokeStyle=C.grid;ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(p.l,y);ctx.lineTo(w-p.r,y);ctx.stroke();ctx.fillStyle=C.txt;ctx.fillText(hasH?(v>=0?'+':'')+v.toFixed(1):Math.round(v*100)+'%',p.l-4,y)});
 if(hasH){const zy=yP(0);ctx.strokeStyle=C.horiz;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(p.l,zy);ctx.lineTo(w-p.r,zy);ctx.stroke()}
 ctx.textAlign='center';ctx.textBaseline='top';yrLb().forEach(lb=>{ctx.fillStyle=C.txt;ctx.fillText(lb.t,xP(lb.i),h-p.b+5)});
+drawSolEqMarkers(ctx,xP,p.t,p.b,h,dy);
 if(!hasH){data.forEach(d=>{const x=xP(d.doy),bh=(d.force/1)*ch,col=d.force>.6?C.tideH:d.force>.3?C.tideMid:C.tideL;ctx.fillStyle=col;ctx.globalAlpha=.5;ctx.fillRect(x-1,p.t+ch-bh,Math.max(2,cw/dy),bh)});ctx.globalAlpha=1}
 ctx.strokeStyle=hasH?C.tideH:C.tideH;ctx.lineWidth=hasH?2:1.5;ctx.lineCap='round';ctx.setLineDash([]);ctx.beginPath();
 data.forEach((d,i)=>{const x=xP(hasH?d.doy:d.doy),y=yP(hasH?d.h:d.force);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)});ctx.stroke();
@@ -254,7 +306,7 @@ if(dayV<data.length){const v=hasH?data[dayV].h:data[dayV].force;const y=yP(v);ct
 
 /* UI setup */
 document.getElementById('locSel').innerHTML='';
-LOCS.forEach((l,i)=>{const b=document.createElement('button');b.className='loc-btn'+(i===0?' active':'');b.textContent=l.name;b.onclick=()=>{loc=l;document.querySelectorAll('.loc-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById('customLocWrap').style.display='none';render()};document.getElementById('locSel').appendChild(b)});
+LOCS.forEach((l,i)=>{const b=document.createElement('button');b.className='loc-btn'+(i===0?' active':'');b.textContent=l.name;b.onclick=()=>{loc=l;tzMode=String(l.tz);syncTzSelect();document.querySelectorAll('.loc-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById('customLocWrap').style.display='none';render()};document.getElementById('locSel').appendChild(b)});
 const custBtn=document.createElement('button');custBtn.className='loc-btn';custBtn.textContent='Personalizar';custBtn.onclick=()=>{document.querySelectorAll('.loc-btn').forEach(x=>x.classList.remove('active'));custBtn.classList.add('active');document.getElementById('customLocWrap').style.display='';document.getElementById('custLat').value=loc.lat;document.getElementById('custLng').value=loc.lng};document.getElementById('locSel').appendChild(custBtn);
 document.getElementById('custGo').onclick=()=>{const la=parseFloat(document.getElementById('custLat').value),ln=parseFloat(document.getElementById('custLng').value);if(!isNaN(la)&&!isNaN(ln)){loc={name:'Custom',lat:la,lng:ln};render()}};
 document.getElementById('custLat').addEventListener('change',()=>document.getElementById('custGo').click());
@@ -293,12 +345,16 @@ if(sub==='year'){
 h+='<div class="stats-grid" id="s-st"></div>';el.innerHTML=h;
 drawComp(sC(document.getElementById('s-cp'),280,280),280,[data],sel.az,C.sunP,C.sunT,C.sunDot,sub==='year'?data:null,C.sun);
 const ac=document.getElementById('s-al'),aw=ac.parentElement.clientWidth-32;
-let sunDailyMaxCache=null;
-if(sub==='year'){sunDailyMaxCache=computeSunDailyMax()}
+let sunDailyMaxCache=null;let sunExtremesCache=null;
+if(sub==='year'){sunDailyMaxCache=computeSunDailyMax();sunExtremesCache=computeSunExtremes()}
 const altOpts={fill:C.sunF,line:C.sun,dot:C.sunDot,golden:true,twilight:true,minAlt:Math.max(-20,mnD-2),maxAlt:Math.max(15,mxD+5),xLabels:sub==='day'?dayLb:yrLb()};
 if(sub==='year'&&sunDailyMaxCache){
   altOpts.auxLine=sunDailyMaxCache.map(d=>d.maxAlt);altOpts.auxColor=dk?'rgba(232,146,46,.25)':'rgba(199,91,34,.2)';
-  altOpts.auxLine2=sunDailyMaxCache.map(d=>{const m3=Math.max(0,d.maxTime-180);return sunAltAtMin(d.doy,m3)});altOpts.auxColor2=dk?'rgba(90,122,165,.35)':'rgba(90,122,165,.22)'}
+  altOpts.auxLine2=sunDailyMaxCache.map(d=>{const m3=Math.max(0,d.maxTime-180);return sunAltAtMin(d.doy,m3)});altOpts.auxColor2=dk?'rgba(90,122,165,.35)':'rgba(90,122,165,.22)';
+  const ex=sunExtremesCache;const rc=dk?'rgba(93,202,165,.35)':'rgba(29,158,117,.28)';const bc=dk?'rgba(133,183,235,.35)':'rgba(55,138,221,.28)';
+  altOpts.extraMarkers=[
+    {d:ex.earlyRise.doy,l:'↑ cedo',col:rc,yi:0},{d:ex.lateRise.doy,l:'↑ tarde',col:bc,yi:0},
+    {d:ex.earlySet.doy,l:'↓ cedo',col:bc,yi:1},{d:ex.lateSet.doy,l:'↓ tarde',col:rc,yi:1}]}
 drawAlt(sC(ac,aw,170),aw,170,data,si,altOpts);
 if(sub==='year'){const curAlt=sel.alt;
   const dB2=makeDateFromDoy(dayV,Math.floor(Math.max(0,mins-5)/60),(Math.max(0,mins-5))%60);
@@ -313,12 +369,37 @@ if(sub==='year'){const curAlt=sel.alt;
 let sh='<div class="stat-card"><div class="stat-lbl">Altitude</div><div class="stat-v'+(sel.alt<0?' neg':'')+'">'+sel.alt.toFixed(1)+'°</div></div>';
 sh+='<div class="stat-card"><div class="stat-lbl">Azimute</div><div class="stat-v">'+Math.round(sel.az)+'° '+dN(sel.az)+'</div></div>';
 if(sub==='day'){const t=SunCalc.getTimes(fromDoy(dayV),loc.lat,loc.lng);
-if(t.sunrise)sh+='<div class="stat-card"><div class="stat-lbl">Nascer</div><div class="stat-v">'+fT(t.sunrise.getHours()*60+t.sunrise.getMinutes())+'</div></div>';
-if(t.sunset)sh+='<div class="stat-card"><div class="stat-lbl">Pôr do sol</div><div class="stat-v">'+fT(t.sunset.getHours()*60+t.sunset.getMinutes())+'</div></div>';
-if(t.goldenHour)sh+='<div class="stat-card"><div class="stat-lbl">Início golden h.</div><div class="stat-v">'+fT(t.goldenHour.getHours()*60+t.goldenHour.getMinutes())+'</div></div>';
-if(t.sunrise&&t.sunset){const d=(t.sunset-t.sunrise)/6e4;sh+='<div class="stat-card"><div class="stat-lbl">Duração do dia</div><div class="stat-v">'+Math.floor(d/60)+'h'+String(Math.round(d%60)).padStart(2,'0')+'</div></div>'}}
+if(t.sunrise)sh+='<div class="stat-card"><div class="stat-lbl">Nascer</div><div class="stat-v">'+fT(getMinutesInTz(t.sunrise))+'</div></div>';
+if(t.sunset)sh+='<div class="stat-card"><div class="stat-lbl">Pôr do sol</div><div class="stat-v">'+fT(getMinutesInTz(t.sunset))+'</div></div>';
+if(t.goldenHour)sh+='<div class="stat-card"><div class="stat-lbl">Início golden h.</div><div class="stat-v">'+fT(getMinutesInTz(t.goldenHour))+'</div></div>';
+if(t.sunrise&&t.sunset){const rs=getMinutesInTz(t.sunrise),ss=getMinutesInTz(t.sunset),d=ss>=rs?ss-rs:ss+1440-rs;sh+='<div class="stat-card"><div class="stat-lbl">Duração do dia</div><div class="stat-v">'+Math.floor(d/60)+'h'+String(Math.round(d%60)).padStart(2,'0')+'</div></div>'}}
 if(sub==='year'){const al=data.map(d=>d.alt);sh+='<div class="stat-card"><div class="stat-lbl">Máx. no ano</div><div class="stat-v">'+Math.max(...al).toFixed(1)+'°</div></div>';sh+='<div class="stat-card"><div class="stat-lbl">Variação</div><div class="stat-v">'+(Math.max(...al)-Math.min(...al)).toFixed(1)+'°</div></div>'}
-document.getElementById('s-st').innerHTML=sh}
+document.getElementById('s-st').innerHTML=sh;
+if(sub==='year'){
+  const ex=sunExtremesCache;const sq=getSolEqDoys();
+  const tzLbl=getTzLabel();
+  let tb='<div class="card"><div class="card-label">Datas-chave · '+tzLbl+'</div><table style="width:100%;font-size:12px;border-collapse:collapse">';
+  tb+='<tr style="color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.4px"><td style="padding:6px 4px">Evento</td><td style="padding:6px 4px">Data</td><td style="padding:6px 4px">Hora</td></tr>';
+  function noonStr(doy){const d=ex.days[doy];if(!d||d.noon===null)return'—';return fT(d.noon)+' ☉'}
+  const rows=[
+    {n:'Equinócio mar.',d:sq[0].d,t:noonStr(sq[0].d)},
+    {n:'Solstício jun.',d:sq[1].d,t:noonStr(sq[1].d)},
+    {n:'Equinócio set.',d:sq[2].d,t:noonStr(sq[2].d)},
+    {n:'Solstício dez.',d:sq[3].d,t:noonStr(sq[3].d)},
+    {n:'Nascer mais cedo',d:ex.earlyRise.doy,t:fT(ex.earlyRise.rise)},
+    {n:'Nascer mais tarde',d:ex.lateRise.doy,t:fT(ex.lateRise.rise)},
+    {n:'Pôr mais cedo',d:ex.earlySet.doy,t:fT(ex.earlySet.set)},
+    {n:'Pôr mais tarde',d:ex.lateSet.doy,t:fT(ex.lateSet.set)},
+    {n:'Dia mais longo',d:ex.longest.doy,t:Math.floor(ex.longest.dur/60)+'h'+String(Math.round(ex.longest.dur%60)).padStart(2,'0')},
+    {n:'Dia mais curto',d:ex.shortest.doy,t:Math.floor(ex.shortest.dur/60)+'h'+String(Math.round(ex.shortest.dur%60)).padStart(2,'0')}
+  ];
+  rows.forEach((r,i)=>{const sep=i===3||i===5||i===7?'border-bottom:1px solid var(--bd)':'';tb+='<tr style="'+sep+'"><td style="padding:5px 4px">'+r.n+'</td><td style="padding:5px 4px;font-weight:600">'+fD(fromDoy(r.d))+'</td><td style="padding:5px 4px;font-weight:600;font-variant-numeric:tabular-nums">'+r.t+'</td></tr>'});
+  tb+='</table>';
+  const eots=ex.days.filter(d=>d.eot!==null).map(d=>d.eot);
+  const eotMin=Math.min(...eots),eotMax=Math.max(...eots);
+  tb+='<div style="font-size:10px;color:var(--tx3);margin-top:8px;line-height:1.5">☉ = meio-dia solar. Equação do tempo no ano: '+eotMin.toFixed(0)+' a +'+(eotMax>0?'':'')+eotMax.toFixed(0)+' min (diferença entre meio-dia solar e 12:00 do relógio).</div>';
+  tb+='</div>';
+  document.getElementById('s-st').insertAdjacentHTML('afterend',tb)}}
 
 function renderMoon(){
 const sub=moonSub,mins=+document.getElementById('m-ts').value,dayV=+document.getElementById('m-ds').value;
